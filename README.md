@@ -12,6 +12,13 @@
 )
 ```
 
+```commandline
+kubectl krew update
+kubectl krew install minio
+kubectl minio version
+kubectl minio init --namespace minio-operator
+```
+
 # Reference
    * https://docs.min.io/minio/k8s/deployment/deploy-minio-operator.html#deploy-operator-kubernetes
       * https://github.com/minio/operator: MinIO Operator
