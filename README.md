@@ -19,6 +19,28 @@ kubectl minio version
 kubectl minio init --namespace minio-operator
 ```
 
+```commandline
+kubectl get deployments -A --field-selector metadata.name=minio-operator
+```
+
+```commandline
+kubectl create ns minio-tenant-1
+```
+```commandline
+kubectl minio tenant create minio-tenant-1 \
+--servers          3                     \
+--volumes          6                     \
+--capacity         100Gi                 \
+--namespace        minio-tenant-1        \
+--storage-class local-storage
+```
+
+```commandline
+kubectl minio tenant delete minio-tenant-1 --namespace minio-tenant-1
+kubectl delete ns minio-tenant-1
+```
+
 # Reference
+   * https://docs.min.io/minio/k8s/reference/minio-kubectl-plugin.html: MinIO Kubernetes Plugin
    * https://docs.min.io/minio/k8s/deployment/deploy-minio-operator.html#deploy-operator-kubernetes
       * https://github.com/minio/operator: MinIO Operator
