@@ -157,6 +157,7 @@ keytool -keystore cacerts -importcert -alias MyCertificate -file /tmp/MyCertific
    * Use the default password of "changeit"
 
 ![alt text](JetbrainsDatagripMinioConnection.png "Title")
+![alt text](JetbrainDataGripAwsS3.png "Title")
 
 # Reference
    * https://docs.min.io/minio/k8s/reference/minio-kubectl-plugin.html: MinIO Kubernetes Plugin
