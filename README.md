@@ -72,6 +72,67 @@ openssl genrsa -out private.key 2048
 openssl req -new -x509 -nodes -days 730 -key private.key -out public.crt -config openssl.conf
 ```
 
+```commandline
+echo -n | openssl s_client -connect minio-tenant-1-console.minio-tenant-1.svc.cluster.local:9443
+```
+```commandline
+cd cert
+openssl x509 -in public.crt -noout -text
+```
+
+```text
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            07:c5:51:de:60:80:41:cd:1e:a2:62:94:55:a7:8a:69
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: CN=minikubeCA
+        Validity
+            Not Before: Dec 17 12:35:16 2021 GMT
+            Not After : Dec 17 12:35:16 2022 GMT
+        Subject: O=system:nodes, CN=system:node:*.minio-tenant-1-hl.minio-tenant-1.svc.cluster.local
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:5a:b3:d2:28:0a:7f:c7:09:0b:55:3d:91:6b:ab:
+                    30:ce:76:0e:7e:a5:43:1e:14:3e:6d:bb:42:9b:58:
+                    7e:0b:24:2d:19:b6:01:5e:65:90:93:63:ee:45:be:
+                    38:e2:f8:93:48:e1:a0:74:d6:22:da:67:42:56:93:
+                    1a:08:47:fc:33
+                ASN1 OID: prime256v1
+                NIST CURVE: P-256
+        X509v3 extensions:
+            X509v3 Key Usage: critical
+                Digital Signature, Key Encipherment
+            X509v3 Extended Key Usage:
+                TLS Web Server Authentication, TLS Web Client Authentication
+            X509v3 Basic Constraints: critical
+                CA:FALSE
+            X509v3 Authority Key Identifier:
+                keyid:7F:AD:08:47:FE:DF:54:AE:C2:8A:FE:08:86:8F:7E:56:F6:5C:BE:BA
+
+            X509v3 Subject Alternative Name:
+                DNS:minio-tenant-1-ss-0-{0...2}.minio-tenant-1-hl.minio-tenant-1.svc.cluster.local, DNS:minio.minio-tenant-1.svc.cluster.local, DNS:minio.minio-tenant-1, DNS:minio.minio-tenant-1.svc, DNS:*.minio-tenant-1-hl.minio-tenant-1.svc.cluster.local, DNS:*.minio-tenant-1.svc.cluster.local
+    Signature Algorithm: sha256WithRSAEncryption
+         10:fd:c1:09:ae:1a:fc:c1:b2:c1:17:76:ca:b5:3b:65:47:04:
+         bb:30:32:28:aa:8f:ea:0c:a6:c7:35:14:df:cd:3a:96:69:aa:
+         66:29:56:f2:39:79:3c:56:5b:60:81:ae:c9:6a:01:21:34:66:
+         ea:df:77:2a:4d:1f:cd:57:8e:d2:ec:b9:9d:f4:a4:84:92:63:
+         3b:fc:94:2f:0a:92:f0:2e:d8:9a:95:c3:19:b5:f1:47:57:3b:
+         2c:42:19:11:b9:1e:19:be:98:0c:d5:9b:5c:c5:5b:a1:0c:a0:
+         fe:88:9d:28:cf:55:b1:8c:b3:04:95:9d:7d:0c:c0:e4:9f:4f:
+         99:9a:bc:80:ab:be:84:67:6a:f8:ef:9f:3e:04:de:0f:6b:5d:
+         42:26:e3:ff:77:5b:6d:35:94:32:41:6a:81:01:30:19:0e:90:
+         92:33:29:84:34:1f:f8:6c:19:92:27:25:5f:0d:60:c8:2f:9c:
+         52:3d:80:55:77:b9:42:c8:58:0c:19:ec:2d:cf:a6:7a:2c:7c:
+         42:da:c8:a1:17:4a:52:c5:c4:f1:b0:fb:25:1d:15:6e:6a:ed:
+         96:5c:42:65:70:21:37:cb:87:8e:66:16:ec:06:0c:48:fc:08:
+         26:11:79:a1:db:a4:b9:ad:ae:ba:e8:4e:7a:b5:a9:1b:62:90:
+         5b:e9:69:40
+```
+
 # Minio console
    * https://minio-tenant-1-console.minio-tenant-1.svc.cluster.local:9443/: Minio console
 
@@ -80,6 +141,22 @@ kubeclt minio proxy
 ```
 # Minio API
    * https://minio.minio-tenant-1.svc.cluster.local
+
+# Issues
+##  Jetbrains DataGrip Minio connection: Unable to execute HTTP request: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+   * https://intellij-support.jetbrains.com/hc/en-us/community/posts/115000094584-IDEA-Ultimate-2016-3-4-throwing-unable-to-find-valid-certification-path-to-requested-target-when-trying-to-refresh-gradle
+
+   * Get the certificate
+```commandline
+echo -n | openssl s_client -connect minio.minio-tenant-1.svc.cluster.local:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/MyCertificate.cer
+```
+   * Add certificate to key store
+```commandline
+keytool -keystore cacerts -importcert -alias MyCertificate -file /tmp/MyCertificate.cer
+```
+   * Use the default password of "changeit"
+
+![alt text](JetbrainsDatagripMinioConnection.png "Title")
 
 # Reference
    * https://docs.min.io/minio/k8s/reference/minio-kubectl-plugin.html: MinIO Kubernetes Plugin
