@@ -41,7 +41,7 @@ I1216 17:38:37.190045   21518 tenant-create.go:69] create tenant command started
 Tenant 'minio-tenant-1' created in 'minio-tenant-1' Namespace
 
   Username: admin
-  Password: f876a12a-d5af-475d-aeeb-a780e788805f
+  Password: 7286b02c-8db6-4083-93d6-ea9184ad2e95
   Note: Copy the credentials to a secure location. MinIO will not display these again.
 
 +-------------+------------------------+----------------+--------------+--------------+
@@ -146,18 +146,52 @@ kubeclt minio proxy
 ##  Jetbrains DataGrip Minio connection: Unable to execute HTTP request: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
    * https://intellij-support.jetbrains.com/hc/en-us/community/posts/115000094584-IDEA-Ultimate-2016-3-4-throwing-unable-to-find-valid-certification-path-to-requested-target-when-trying-to-refresh-gradle
 
-   * Get the certificate
+   * Get the certificate. It's the same as the file "cert/public.crt"
 ```commandline
-echo -n | openssl s_client -connect minio.minio-tenant-1.svc.cluster.local:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/MyCertificate.cer
+echo -n | openssl s_client -connect minio.minio-tenant-1.svc.cluster.local:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/public.crt
 ```
    * Add certificate to key store
 ```commandline
-keytool -keystore cacerts -importcert -alias MyCertificate -file /tmp/MyCertificate.cer
+cd cert
+keytool -keystore cacerts -importcert -alias minio-cert -file public.crt
+keytool --keystore cacerts --list
+keytool --keystore cacerts --list | grep minio
 ```
    * Use the default password of "changeit"
 
 ![alt text](JetbrainsDatagripMinioConnection.png "Title")
 ![alt text](JetbrainDataGripAwsS3.png "Title")
+
+
+* Use the default password of "changeit"
+```commandline
+cd "/Applications/IntelliJ IDEA.app/Contents/jbr/Contents/Home/lib/security"
+"/Applications/IntelliJ IDEA.app/Contents/jbr/Contents/Home/bin/keytool" -keystore cacerts -importcert -alias minio-cert -file /tmp/public.crt
+"/Applications/IntelliJ IDEA.app/Contents/jbr/Contents/Home/bin/keytool" -keystore cacerts -list
+```
+# Minio client
+   * https://docs.min.io/docs/minio-client-complete-guide: MinIO Client Complete Guide
+```commandline
+brew install minio/stable/mc
+```
+
+# AWS S3 
+   * https://docs.min.io/docs/aws-cli-with-minio.html: AWS CLI with MinIO Server 
+   * https://stackoverflow.com/questions/32946050/ssl-certificate-verify-failed-in-aws-cli: SSL CERTIFICATE_VERIFY_FAILED in aws cli
+   * https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html: Environment variables to configure the AWS CLI
+## Configure
+```commandline
+aws configure
+```
+## List files
+```commandline
+aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 ls
+```
+
+## Copy file
+```commandline
+aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 cp ./cluster.local s3://landing
+```
 
 # Reference
    * https://docs.min.io/minio/k8s/reference/minio-kubectl-plugin.html: MinIO Kubernetes Plugin
