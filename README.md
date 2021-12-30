@@ -1,5 +1,6 @@
 
-
+# Install
+## Setup Krew
 ```commandline
 (                                                                                                                                              ─╯
   set -x; cd "$(mktemp -d)" &&
@@ -12,6 +13,7 @@
 )
 ```
 
+## Create Minio operator
 ```commandline
 kubectl krew update
 kubectl krew install minio
@@ -20,12 +22,31 @@ kubectl minio init --namespace minio-operator
 ```
 
 ```commandline
+kubectl krew update minio
+```
+
+```commandline
 kubectl get deployments -A --field-selector metadata.name=minio-operator
 ```
+
+## Create instance namespace
 
 ```commandline
 kubectl create ns minio-tenant-1
 ```
+
+## Create certificate
+```commandline
+cd cert
+./init.sh
+```
+
+## Create Minio instance
+   * Ensure the Minio persistent volumes exist and are available
+```commandline
+kubectl get pv | grep minio-local-storage
+```
+
 ```commandline
 kubectl minio tenant create minio-tenant-1 \
 --servers          3                     \
@@ -35,13 +56,18 @@ kubectl minio tenant create minio-tenant-1 \
 --storage-class minio-local-storage
 ```
 
+```commandline
+kubens minio-tenant-1
+kubectl get pvc
+```
+
 ```text
 I1216 17:38:37.190045   21518 tenant-create.go:69] create tenant command started
 
 Tenant 'minio-tenant-1' created in 'minio-tenant-1' Namespace
 
   Username: admin
-  Password: 7286b02c-8db6-4083-93d6-ea9184ad2e95
+  Password: e38c92d3-3905-4817-a7ba-e9081a2b4fde
   Note: Copy the credentials to a secure location. MinIO will not display these again.
 
 +-------------+------------------------+----------------+--------------+--------------+
@@ -51,7 +77,13 @@ Tenant 'minio-tenant-1' created in 'minio-tenant-1' Namespace
 | Console     | minio-tenant-1-console | minio-tenant-1 | ClusterIP    | 9443         |
 +-------------+------------------------+----------------+--------------+--------------+
 ```
+## Create Minio console ingress
+```commandline
+cd yaml
+kubectl apply -f minio-ingress.yaml
+```
 
+# How to delete Minio instance
 ```commandline
 kubectl minio tenant delete minio-tenant-1 --namespace minio-tenant-1
 kubectl delete ns minio-tenant-1
@@ -186,12 +218,21 @@ aws configure
 ## List files
 ```commandline
 aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 ls
+aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 ls s3://kaggle
 ```
 
 ## Copy file
 ```commandline
 aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 cp ./cluster.local s3://landing
 ```
+
+## Delete file
+```commandline
+aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3  rm s3://landing/cluster.local
+```
+
+# Tools
+   * https://s3tools.org/s3cmd: Amazon S3 Tools: Command Line S3 Client Software and S3 Backup
 
 # Reference
    * https://docs.min.io/minio/k8s/reference/minio-kubectl-plugin.html: MinIO Kubernetes Plugin
