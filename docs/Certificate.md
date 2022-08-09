@@ -1,25 +1,42 @@
-# How to extract MINIO generated TLS certificate
+# MINIO TLS
+## Get MINIO generated TLS certificate
    * Run Minio one, it will generate TLS keys using Minikube CA certificate. Get the private key and certificate from kubernetes secrets 
-```commandline
+```shell
 kubectl get -n minio-tenant-1 secret/minio-tenant-1-tls --output="jsonpath={.data.private\.key}" | base64 --decode > private.key
 kubectl get -n minio-tenant-1 secret/minio-tenant-1-tls --output="jsonpath={.data.public\.crt}" | base64 --decode > public.crt
 ```
 
   * [See script](../scripts/get-generated-cert.sh)
 
-# How to generate MINIO TLS certificate 
-* https://github.com/minio/minio/tree/master/docs/tls/kubernetes: How to secure access to MinIO on Kubernetes with TLS
+  * https://github.com/minio/minio/tree/master/docs/tls/kubernetes: How to secure access to MinIO on Kubernetes with TLS
 
+## Set MINIO TLS 
+```shell
+kubectl -n minio-tenant-1 delete secret minio-tenant-1-tls
+```
 
-```commandline
+```shell
+kubectl -n minio-tenant-1 create secret generic minio-tenant-1-tls \
+        --from-file="$LABTOOLS/modules/minio-k8s/cert/private.key" \
+        --from-file="$LABTOOLS/modules/minio-k8s/cert/public.crt"                    
+```
+
+```shell
+kubectl -n minio-tenant-1 get secret minio-tenant-1-tls -o=yaml | yh
+````
+
+## Generate MINIO TLS certificate 
+   * https://github.com/minio/minio/tree/master/docs/tls/kubernetes: How to secure access to MinIO on Kubernetes with TLS
+
+```shell
 openssl genrsa -out private.key 2048
 openssl req -new -x509 -nodes -days 730 -key private.key -out public.crt -config openssl.conf
 ```
 
-```commandline
+```shell
 echo -n | openssl s_client -connect minio-tenant-1-console.minio-tenant-1.svc.cluster.local:9443
 ```
-```commandline
+```shell
 cd cert
 openssl x509 -in public.crt -noout -text
 ```
@@ -79,7 +96,7 @@ Certificate:
 
 # How to add MINIO certificate on Kuberbetes pod, Linux and Java
    * Minikube TLS CA certificate
-```commandline
+```shell
 openssl x509 -in $MINIKUBE_HOME/ca.crt -noout -text
 ```
 ```text
@@ -144,7 +161,7 @@ Certificate:
 ```
 
    * On Kubernetes pod Debian/Ubuntu run:
-```commandline
+```shell
 cp $MINIKUBE_HOME/ca.crt /usr/local/share/ca-certificates/
 update-ca-certificates
 ```
@@ -157,3 +174,4 @@ update-ca-certificates
 # References
    * https://www.ibm.com/docs/en/netcoolomnibus/8?topic=chart-securing-ingress-tls: Securing Ingress with TLS
    * https://www.sslshopper.com/article-most-common-openssl-commands.html: The Most Common OpenSSL Commands
+   * https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/: Manage TLS Certificates in a Cluster

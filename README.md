@@ -1,47 +1,54 @@
 
 # Install
 ## Setup Krew
-```commandline
-(                                                                                                                                              ─╯
+```shell
+(
   set -x; cd "$(mktemp -d)" &&
   OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
   ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
-  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/download/v0.4.2/krew-darwin_amd64.tar.gz" &&
-  tar zxvf krew-darwin_amd64.tar.gz &&
-  KREW=./krew-"${OS}_${ARCH}" &&
-  "$KREW" install krew
+  KREW="krew-${OS}_${ARCH}" &&
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
+  tar zxvf "${KREW}.tar.gz" &&
+  ./"${KREW}" install krew
 )
 ```
 
-## Create Minio operator
-```commandline
+```shell
 kubectl krew update
+kubectl krew upgrade
+kubectl krew list
+```
+
+
+## Create Minio operator
+```shell
+kubectl krew update minio
 kubectl krew install minio
 kubectl minio version
 kubectl minio init --namespace minio-operator
 ```
 
-```commandline
-kubectl krew update minio
-```
-
-```commandline
+```shell
 kubectl get deployments -A --field-selector metadata.name=minio-operator
 ```
 
 ## Create instance namespace
 
-```commandline
+```shell
 kubectl create ns minio-tenant-1
 ```
 
 ## Create Minio instance
    * Ensure the Minio persistent volumes exist and are available
-```commandline
+```shell
 kubectl get pv | grep minio-local-storage
 ```
 
-```commandline
+```shell
+kubectl minio --namespace minio-tenant-1 tenant delete minio-tenant-1
+```
+
+```shell
 kubectl minio tenant create minio-tenant-1 \
 --servers          3                     \
 --volumes          6                     \
@@ -50,18 +57,16 @@ kubectl minio tenant create minio-tenant-1 \
 --storage-class minio-local-storage
 ```
 
-```commandline
+```shell
 kubens minio-tenant-1
 kubectl get pvc
 ```
 
 ```text
-I1216 17:38:37.190045   21518 tenant-create.go:69] create tenant command started
-
 Tenant 'minio-tenant-1' created in 'minio-tenant-1' Namespace
 
   Username: admin
-  Password: e38c92d3-3905-4817-a7ba-e9081a2b4fde
+  Password: fd24e98f-94dc-4c61-b255-e320a5ee516d
   Note: Copy the credentials to a secure location. MinIO will not display these again.
 
 +-------------+------------------------+----------------+--------------+--------------+
@@ -72,29 +77,26 @@ Tenant 'minio-tenant-1' created in 'minio-tenant-1' Namespace
 +-------------+------------------------+----------------+--------------+--------------+
 ```
 ## Create Minio console ingress
-```commandline
-cd yaml
-kubectl apply -f minio-ingress.yaml
+```shell
+kubectl apply -f yaml/minio-ingress.yaml
 ```
 
+## Set certificate
+
+
 # How to delete Minio instance
-```commandline
+```shell
 kubectl minio tenant delete minio-tenant-1 --namespace minio-tenant-1
 kubectl delete ns minio-tenant-1
 kubectl delete pv/local-storage-pv000{1,2,3,4,5,6}
-minikube --node=cluster2     ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/.minio.sys"
-minikube --node=cluster2-m02 ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/.minio.sys"
-minikube --node=cluster2-m03 ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/.minio.sys"
-minikube --node=cluster2     ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/*"
-minikube --node=cluster2-m02 ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/*"
-minikube --node=cluster2-m03 ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/*"
+scripts/clean-pv.sh
 ```
 
 
 # Minio console
    * https://minio-tenant-1-console.minio-tenant-1.svc.cluster.local:9443/: Minio console
 
-```commandline
+```shell
 kubeclt minio proxy
 ```
 # Minio API
@@ -102,7 +104,7 @@ kubeclt minio proxy
 
 # Minio client
    * https://docs.min.io/docs/minio-client-complete-guide: MinIO Client Complete Guide
-```commandline
+```shell
 brew install minio/stable/mc
 ```
 
@@ -112,29 +114,29 @@ brew install minio/stable/mc
    * https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html: Environment variables to configure the AWS CLI
 ## Configure
    * https://docs.min.io/docs/aws-cli-with-minio.html: AWS CLI with MinIO Server
-```commandline
+```shell
 aws configure
 aws configure set default.s3.signature_version s3v4
 ```
 ## List files
-```commandline
-aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 ls
-aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 ls s3://kaggle
+```shell
+aws --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 ls
+aws --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 ls s3://kaggle
 ```
 
 ## Copy file
-```commandline
-aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 cp ./cluster.local s3://landing
+```shell
+aws --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 cp ./cluster.local s3://landing
 ```
 
 ## Delete file
-```commandline
-aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3  rm s3://landing/cluster.local
+```shell
+aws --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3  rm s3://landing/cluster.local
 ```
 
 # Tools
    * https://s3tools.org/s3cmd: Amazon S3 Tools: Command Line S3 Client Software and S3 Backup
-   * 
+
 # See also
    * [Certificates](docs/Certificate.md)
    * [Jetbrains configuration](docs/Jetbrains.md)

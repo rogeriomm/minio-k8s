@@ -10,7 +10,7 @@ metadata:
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
 spec:
   rules:
-    - host: minio-console.worldl.xpt
+    - host: minio.worldl.xpt
       http:
         paths:
           - path: /
