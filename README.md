@@ -2,30 +2,27 @@
 # Install
 ## Setup Krew
 ```shell
-(
+(                                                                                                                                              ─╯
   set -x; cd "$(mktemp -d)" &&
   OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
   ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
-  KREW="krew-${OS}_${ARCH}" &&
-  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" &&
-  tar zxvf "${KREW}.tar.gz" &&
-  ./"${KREW}" install krew
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/download/v0.4.2/krew-darwin_amd64.tar.gz" &&
+  tar zxvf krew-darwin_amd64.tar.gz &&
+  KREW=./krew-"${OS}_${ARCH}" &&
+  "$KREW" install krew
 )
 ```
 
-```shell
-kubectl krew update
-kubectl krew upgrade
-kubectl krew list
-```
-
-
 ## Create Minio operator
 ```shell
-kubectl krew update minio
+kubectl krew update
 kubectl krew install minio
 kubectl minio version
 kubectl minio init --namespace minio-operator
+```
+
+```shell
+kubectl krew update minio
 ```
 
 ```shell
@@ -45,10 +42,6 @@ kubectl get pv | grep minio-local-storage
 ```
 
 ```shell
-kubectl minio --namespace minio-tenant-1 tenant delete minio-tenant-1
-```
-
-```shell
 kubectl minio tenant create minio-tenant-1 \
 --servers          3                     \
 --volumes          6                     \
@@ -59,37 +52,25 @@ kubectl minio tenant create minio-tenant-1 \
 
 ```shell
 kubens minio-tenant-1
-kubectl get pvc
 ```
 
-```text
-Tenant 'minio-tenant-1' created in 'minio-tenant-1' Namespace
-
-  Username: admin
-  Password: fd24e98f-94dc-4c61-b255-e320a5ee516d
-  Note: Copy the credentials to a secure location. MinIO will not display these again.
-
-+-------------+------------------------+----------------+--------------+--------------+
-| APPLICATION | SERVICE NAME           | NAMESPACE      | SERVICE TYPE | SERVICE PORT |
-+-------------+------------------------+----------------+--------------+--------------+
-| MinIO       | minio                  | minio-tenant-1 | ClusterIP    | 443          |
-| Console     | minio-tenant-1-console | minio-tenant-1 | ClusterIP    | 9443         |
-+-------------+------------------------+----------------+--------------+--------------+
-```
 ## Create Minio console ingress
 ```shell
-kubectl apply -f yaml/minio-ingress.yaml
+cd yaml
+kubectl apply -f minio-ingress.yaml
 ```
-
-## Set certificate
-
 
 # How to delete Minio instance
 ```shell
 kubectl minio tenant delete minio-tenant-1 --namespace minio-tenant-1
 kubectl delete ns minio-tenant-1
 kubectl delete pv/local-storage-pv000{1,2,3,4,5,6}
-scripts/clean-pv.sh
+minikube --node=cluster2     ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/.minio.sys"
+minikube --node=cluster2-m02 ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/.minio.sys"
+minikube --node=cluster2-m03 ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/.minio.sys"
+minikube --node=cluster2     ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/*"
+minikube --node=cluster2-m02 ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/*"
+minikube --node=cluster2-m03 ssh "sudo rm -rf /data/local-storage/pv000{1,2,3,4,5,6}/*"
 ```
 
 
@@ -120,18 +101,32 @@ aws configure set default.s3.signature_version s3v4
 ```
 ## List files
 ```shell
-aws --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 ls
-aws --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 ls s3://kaggle
+aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 ls
+aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 ls s3://kaggle
 ```
 
 ## Copy file
 ```shell
-aws --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 cp ./cluster.local s3://landing
+aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3 cp ./cluster.local s3://landing
 ```
 
 ## Delete file
 ```shell
-aws --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3  rm s3://landing/cluster.local
+aws --no-verify-ssl  --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3  rm s3://landing/cluster.local
+```
+
+# Troubleshooting
+
+```shell
+kubectl logs minio-tenant-1-ss-0-0 -f
+```
+
+```shell
+kubectl logs minio-tenant-1-ss-0-1 -f
+```
+
+```shell
+kubectl logs minio-tenant-1-ss-0-2 -f
 ```
 
 # Tools
@@ -146,5 +141,5 @@ aws --endpoint-url https://minio.minio-tenant-1.svc.cluster.local s3  rm s3://la
    * https://docs.min.io/minio/k8s/deployment/deploy-minio-operator.html#deploy-operator-kubernetes
       * https://github.com/minio/operator: MinIO Operator
    * https://blog.travismclarke.com/post/osx-cli-group-management/: OSX User/Group Management – Part 2: Groups
-   * https://docs.min.io/minio/k8s/tenant-management/deploy-minio-tenant-using-commandline.html#deploy-minio-tenant-commandline
+   * https://docs.min.io/minio/k8s/tenant-management/deploy-minio-tenant-using-shell.html#deploy-minio-tenant-shell
       * "MinIO strongly recommends using locally attached drives on each node intended to support the MinIO Tenant. MinIO’s strict read-after-write and list-after-write consistency model requires local disk filesystems (xfs, ext4, etc.). MinIO also shows best performance with locally-attached drives."
